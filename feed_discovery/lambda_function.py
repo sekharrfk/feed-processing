@@ -1,12 +1,15 @@
 import logging
+import os
 
 import boto3
 import requests
 
-env = "staging"
-userId = '630'
-aws_region = "us-east-1"
+env = os.environ("ENV")
+user_id = os.environ("USER_ID")
+aws_region = os.environ("REGION")
+
 s3_resource = boto3.resource(service_name="s3", region_name=aws_region)
+s3_client = s3_resource.meta.client
 
 
 def lambda_handler(event, context):
@@ -18,6 +21,12 @@ def lambda_handler(event, context):
     """
     domain_id, connector_id = fetch_domain_and_connector(event)
     feed_files = fetch_feed_files(domain_id, connector_id)
+    # TODO: Check if the event is from one of the files mentioned in the config
+    missing_feed_files = get_missing_feed_files(feed_files)
+    if len(missing_feed_files) > 0:
+        logging.info("Following feed files are missing: {}".format(",".join(missing_feed_files)))
+        logging.info("Skipping further processing")
+        return
     max_feed_files_timestamp = get_max_feed_files_time(feed_files)
 
     # TODO: add the stat in orchestrator job
@@ -165,3 +174,24 @@ def api_call_helper(method, url, params, headers, payload):
         curl_call = command.format(method=method, headers=headers, data=data, uri=uri)
         raise Exception("Error while calling api: {}".format(curl_call))
     return response
+
+
+def get_missing_feed_files(feed_files):
+    """
+    This function checks if all the files are present in s3. If not, returns the list of missing files
+    :return: list of missing files
+    """
+    missing_feed_files = []
+
+    for feed_file in feed_files:
+        bucket = feed_file["bucket"]
+        key = feed_file["key"]
+        try:
+            s3_client.head_object(Bucket=bucket, Key=key)
+        except s3_client.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                missing_feed_files.append(feed_file)
+            else:
+                raise Exception("Error while calling s3")
+
+    return missing_feed_files
