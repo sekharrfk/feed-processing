@@ -1,12 +1,13 @@
+import json
 import logging
 import os
 
 import boto3
 import requests
 
-env = os.environ("ENV")
-user_id = os.environ("USER_ID")
-aws_region = os.environ("REGION")
+env = os.environ.get("ENV")
+user_id = os.environ.get("USER_ID")
+aws_region = os.environ.get("REGION")
 
 s3_resource = boto3.resource(service_name="s3", region_name=aws_region)
 s3_client = s3_resource.meta.client
@@ -19,6 +20,7 @@ def lambda_handler(event, context):
     2. at least one feed file is latest i.e. haven't been processed earlier
     :param event: s3 event
     """
+    # TODO: fetch the connector id from the feed file. c_onnector_id isn't in the path.
     domain_id, connector_id = fetch_domain_and_connector(event)
     feed_files = fetch_feed_files(domain_id, connector_id)
     # TODO: Check if the event is from one of the files mentioned in the config
@@ -65,7 +67,7 @@ def fetch_feed_files(domain, connector_id):
     # fetch the connector config from the connector api
     url = "https://msapi.{env}.rfksrv.com/connector-api/v1/connectors/{connector_id}".format(env=env,
                                                                                              connector_id=connector_id)
-    headers = {'rfk.userId': userId, 'rfk.domain': domain}
+    headers = {'rfk.userId': user_id, 'rfk.domain': domain}
     response = api_call_helper(method="GET", url=url, params=None, headers=headers, payload=None)
 
     # extract the feed files from the connector config
@@ -115,7 +117,7 @@ def fetch_previous_run_time(domain, connector_id):
 
     url = "http://msapi.{env}.rfksrv.com/job-orchestrator/v1/domains/{domain_id}/jobs".format(env=env, domain_id=domain)
     query_params = {"filter": {"connectorId": connector_id}}
-    headers = {'rfk.userId': userId}
+    headers = {'rfk.userId': user_id}
     response = api_call_helper("GET", url, query_params, headers, None)
 
     job_count = response.json()["count"]
@@ -128,7 +130,7 @@ def fetch_previous_run_time(domain, connector_id):
     url = "http://msapi.{env}.rfksrv.com/job-orchestrator/v1/domains/{domain_id}/jobs/{job_id}/stats".format(env=env,
                                                                                                              domain_id=domain,
                                                                                                              job_id=last_job_id)
-    headers = {'rfk.userId': userId}
+    headers = {'rfk.userId': user_id}
     response = api_call_helper("GET", url, None, headers, None)
 
     # get the last job run's feed received time
@@ -154,14 +156,14 @@ def trigger_orchestrator_job(domain_id, connector_id):
             }
         }
     }
-    headers = {'rfk.userId': userId, 'Content-Type': 'application/json'}
+    headers = {'rfk.userId': user_id, 'Content-Type': 'application/json'}
 
     response = api_call_helper("POST", url, None, headers, payload)
     logging.info("orchestrator job id: {}".format(response.json()["job"]["jobId"]))
 
 
 def api_call_helper(method, url, params, headers, payload):
-    response = requests.request(method, url, params=params, headers=headers, data=payload)
+    response = requests.request(method, url, params=json.dumps(params), headers=headers, data=json.dumps(payload))
     if response.status_code != 200:
         # Added the curl format for better debugging
         # https://stackoverflow.com/a/17936634
