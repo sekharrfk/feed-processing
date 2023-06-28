@@ -1,0 +1,38 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2023-06-26T09:57:20.015Z",
+      "eventName": "ObjectCreated:Copy",
+      "userIdentity": {
+        "principalId": "AWS:AROA24VCLPG5EI5Y2DZNW:chay@sitecore.net"
+      },
+      "requestParameters": {
+        "sourceIPAddress": "49.37.133.69"
+      },
+      "responseElements": {
+        "x-amz-request-id": "J730R6J0QTB7S6TG",
+        "x-amz-id-2": "ml8g/qnlPbxXUQT4dfius1RTjVCO20bmgmHaD5w4A4iZZDpQWCV3xN7ZhMKWcBXnG3JqSEVbvAGLfMoJq7EJpkjAVuwmI2Us"
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "feed-upload-events",
+        "bucket": {
+          "name": "feed-files-test",
+          "ownerIdentity": {
+            "principalId": "A3UPZSFJAYR3KJ"
+          },
+          "arn": "arn:aws:s3:::feed-files-test"
+        },
+        "object": {
+          "key": "customer_feed_aws_sftp/162537903/upload/ex.json",
+          "size": 13310,
+          "eTag": "5b85c4513e611924a5a0b7101d262af2",
+          "sequencer": "00649960FFEE949BF7"
+        }
+      }
+    }
+  ]
+}
